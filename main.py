@@ -10,6 +10,7 @@ display = pygame.display.set_mode((width, height))
 icon = pygame.image.load("icon.png")
 bg = pygame.image.load('bg.png')
 
+
 pygame.display.set_icon(icon)
 cube_x = (width / 2) - (width / 2.2)
 cube_y = (height / 2) - (height / 2.2)
@@ -30,7 +31,7 @@ def draw_cube():
     filename = f'{res}.png'
     playerStand = pygame.image.load(filename)
     display.blit(playerStand, (cube_x, cube_y))
-    pygame.display.update()
+    pygame.display.flip()
 
 
 
@@ -60,14 +61,49 @@ class Button:
 
 def menu():
     global res
+    font = pygame.font.Font(None, 32)
     game = True
     button = Button(100, 50)
-    display.blit(bg, (0, 0))
+    start_button = Button(1000, 50)
+    input_box = pygame.Rect(50, 50, 140, 32)
+    color_inactive = pygame.Color('lightskyblue3')
+    color_active = pygame.Color('dodgerblue2')
+    color = color_inactive
+    active = False
+    text = ''
+    done = False
     while game:
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 pygame.quit()
                 quit()
-        button.draw(20, 100, 'Крутить кубик',lambda :draw_cube())
+            if event.type == pygame.MOUSEBUTTONDOWN:
+                if input_box.collidepoint(event.pos):
+                    active = not active
+                else:
+                    active = False
+                color = color_active if active else color_inactive
+            if event.type == pygame.KEYDOWN:
+                if active:
+                    if event.key == pygame.K_BACKSPACE:
+                        text = text[:-1]
+                    else:
+                        text += event.unicode
+            if text:
+                win_points = int(text)
+                print(win_points)
         clock.tick(60)
+        display.blit(bg, (0, 0))
+        txt_surface = font.render(text, True, color)
+        txt_points = font.render('Очки для победы', True, color)
+        width = max(200, txt_surface.get_width() + 10)
+        input_box.w = width
+        display.blit(txt_surface, (input_box.x + 5, input_box.y + 5))
+        display.blit(txt_points, (50,30))
+        start_button.draw(0,650,'start game')
+        pygame.draw.rect(display, color, input_box, 2)
+        pygame.display.flip()
+        clock.tick(30)
+
+
 menu()
