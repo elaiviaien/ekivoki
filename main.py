@@ -9,13 +9,15 @@ display = pygame.display.set_mode((width, height))
 
 icon = pygame.image.load("icon.png")
 bg = pygame.image.load('bg.png')
-
+font = pygame.font.Font(None, 32)
 pygame.display.set_icon(icon)
 cube_x = (width / 2) - (width / 2.2)
 cube_y = (height / 2) - (height / 2.2)
 clock = pygame.time.Clock()
 res = 0
 roll = True
+color_inactive = pygame.Color('lightskyblue3')
+color_active = pygame.Color('dodgerblue2')
 
 
 def wait():
@@ -25,7 +27,8 @@ def wait():
         mouse = pygame.mouse.get_pos()
 
         event = pygame.event.wait()
-        if event.type == pygame.MOUSEBUTTONDOWN and 100 < mouse[0] < 100 + 215 and 100 < mouse[1] < 100 + 50:
+        if event.type == pygame.MOUSEBUTTONDOWN and (
+                (100 < mouse[0] < 100 + 215 and 100 < mouse[1] < 100 + 50) or (400 < mouse[1] < 400 + 50)):
             break
 
 
@@ -48,7 +51,7 @@ def win_screen(i):
 
 def game_menu():
     global player, font, game_s, player_point, win_points
-    button = Button(215, 50)
+    button = Button(215, 50, 'Крутить кубик', lambda: draw_cube(i))
     while True:
         for i in player:
 
@@ -58,18 +61,19 @@ def game_menu():
                 if event.type == pygame.QUIT:
                     pygame.quit()
                     quit()
-            button.draw(100, 100, 'Крутить кубик', lambda: draw_cube(i))
+            button.draw(100, 100)
             wait()
-
 
             pygame.display.flip()
 
-
 def draw_cube(i):
-    global res,player_point
-    f =None
+    global res, player_point, player
+    f = None
     task = ''
     task_n = ''
+    text_p_a = ''
+
+    input_box = InputBox(0, 400, 140, 32, None,None, text_p_a, None, None, None)
     res = rnd.randrange(1, 7)
     txt_player_name = font.render(f'Игрок: {i}', True, pygame.Color('white'))
     filename = f'cube/{res}.png'
@@ -94,7 +98,7 @@ def draw_cube(i):
         task_n += "Да/нет:"
         f = open("tasks/5.txt", "r", encoding="utf-8")
     elif res == 6:
-        task= 'Ты не должен выполять задание'
+        task = 'Ты не должен выполнять задание'
     if f:
         task += f.read().split('\n')[rnd.randrange(1, 6)]
         f.close()
@@ -102,10 +106,20 @@ def draw_cube(i):
     if task_n:
         txt_task_n = font.render(task_n, True, pygame.Color('white'))
         display.blit(txt_task_n, (400, 30))
-
     txt_task = font.render(task, True, pygame.Color('white'))
     display.blit(txt_task, (400, 50))
-    player_points_text = "Счет: "+str(player_point).replace("{","").replace("}","").replace("'","")
+    pygame.event.clear()
+    while True:
+        event = pygame.event.wait()
+        input_box.handle_event(event)
+        input_box.update()
+        input_box.draw(display)
+        pygame.display.flip()
+        clock.tick(10)
+        if event.type == pygame.KEYDOWN:
+            if event.key == pygame.K_RETURN:
+                break
+    player_points_text = "Счет: " + str(player_point).replace("{", "").replace("}", "").replace("'", "")
     txt_points = font.render(player_points_text, True, pygame.Color('white'))
     display.blit(txt_points, (0, 500))
     pygame.time.delay(100)
@@ -117,85 +131,121 @@ def draw_cube(i):
 
 
 class Button:
-    def __init__(self, width, height):
+    def __init__(self, width, height, message, action=None):
         self.width = width
         self.height = height
+        self.message = message
+        self.action = action
 
-    def draw(self, x, y, message, action=None):
+    def draw(self, x, y):
         mouse = pygame.mouse.get_pos()
         click = pygame.mouse.get_pressed()
         if x < mouse[0] < x + self.width and y < mouse[1] < y + self.height:
             pygame.draw.rect(display, (23, 204, 58), (x, y, self.width, self.height))
-            print_text(message, x + 10, y + 10)
+            print_text(self.message, x + 10, y + 10)
             if click[0] == 1:
-                if action is not None:
-                    action()
+                if self.action is not None:
+                    self.action()
                     pygame.time.delay(100)
         else:
             pygame.draw.rect(display, (14, 162, 58), (x, y, self.width, self.height))
-            print_text(message, x + 10, y + 10)
+            print_text(self.message, x + 10, y + 10)
+
+
+class InputBox:
+
+    def __init__(self, x, y, w, h, text, text_p,text_p_a, players, player, player_point):
+        self.rect = pygame.Rect(x, y, w, h)
+        self.color = color_inactive
+        self.text = text
+        self.txt_surface = font.render(text, True, self.color)
+        self.active = False
+        self.text_p = text_p
+        self.players = players
+        self.player = player
+        self.player_point = player_point
+        self.text_p_a =text_p_a
+    def handle_event(self, event):
+        global res, player, font, player_point, win_points
+        if event.type == pygame.MOUSEBUTTONDOWN:
+            if self.rect.collidepoint(event.pos):
+                self.active = not self.active
+            else:
+                self.active = False
+            self.color = color_active if self.active else color_inactive
+        if event.type == pygame.KEYDOWN:
+            if self.active:
+                if self.text is not None:
+                    if event.key == pygame.K_BACKSPACE:
+                        self.text = self.text[:-1]
+                    else:
+                        self.text += event.unicode
+                    self.txt_surface = font.render(self.text, True, self.color)
+                if self.text_p is not None:
+                    if event.key == pygame.K_BACKSPACE:
+                        self.text_p = self.text_p[:-1]
+                    else:
+                        self.text_p += event.unicode
+                    self.txt_surface = font.render(self.text_p, True, self.color)
+                    if event.key == pygame.K_RETURN:
+                        if self.text_p not in player:
+                            player.append(self.text_p)
+                            player_point = {point: 0 for point in player}
+                if self.text_p_a is not None:
+                    if event.key == pygame.K_BACKSPACE:
+                        self.text_p_a = self.text_p_a[:-1]
+                    else:
+                        self.text_p_a += event.unicode
+                    self.txt_surface = font.render(self.text_p_a, True, self.color)
+                    if event.key == pygame.K_RETURN:
+                        player_point[self.text_p_a] += res
+        if self.text:
+            win_points = int(self.text)
+            print(win_points)
+
+    def update(self):
+        width = max(200, self.txt_surface.get_width() + 10)
+        self.rect.w = width
+
+    def draw(self, screen):
+        screen.blit(self.txt_surface, (self.rect.x + 5, self.rect.y + 5))
+        pygame.draw.rect(screen, self.color, self.rect, 2)
 
 
 def menu():
-    global res, player, font,player_point,win_points
-    font = pygame.font.Font(None, 32)
-    start_button = Button(1000, 50)
-    input_box = pygame.Rect(50, 50, 140, 32)
-    input_box_player = pygame.Rect(400, 50, 200, 32)
-    color_inactive = pygame.Color('lightskyblue3')
-    color_active = pygame.Color('dodgerblue2')
+    global res, player, font, player_point, win_points
+    start_button = Button(1000, 50, 'Начать игру', lambda: game_menu())
     color = color_inactive
     color_pl = color_inactive
-    active_p = False
-    active = False
-    text = ''
     text_p = ''
+    text = ''
     players = ''
     player = []
     player_point = {}
+    input_box1 = InputBox(50, 60, 140, 32, text, None, None, None,None,None)
+    input_box_p = InputBox(400, 60, 140, 32, None, text_p,None, players, player, player_point)
+    input_boxes = [input_box1, input_box_p]
     while True:
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 pygame.quit()
                 quit()
-            if event.type == pygame.MOUSEBUTTONDOWN:
-                if input_box.collidepoint(event.pos):
-                    active_p = not active_p
-                else:
-                    active_p = False
-                color = color_active if active_p else color_inactive
-                if input_box_player.collidepoint(event.pos):
-                    active = not active
-                else:
-                    active = False
-                color_pl = color_active if active else color_inactive
-            if event.type == pygame.KEYDOWN:
-                if active_p:
-                    if event.key == pygame.K_BACKSPACE:
-                        text = text[:-1]
-                    else:
-                        text += event.unicode
-                if active:
-                    if event.key == pygame.K_BACKSPACE:
-                        text_p = text_p[:-1]
-                    else:
-                        text_p += event.unicode
-                    if event.key == pygame.K_RETURN:
-                        if text_p not in player:
-                            player.append(text_p)
-                            player_point = {point: 0 for point in player}
+            for box in input_boxes:
+                box.handle_event(event)
 
-            if text:
-                win_points = int(text)
-                print(win_points)
             print(player)
             print(player_point)
-        clock.tick(60)
+        for box in input_boxes:
+            box.update()
+        for box in input_boxes:
+            box.draw(display)
+
+        pygame.display.flip()
+        clock.tick(10)
+
         display.blit(bg, (0, 0))
-        txt_surface = font.render(text, True, color)
-        txt_surface_p = font.render(text_p, True, color)
         txt_points = font.render('Очки для победы', True, color)
-        txt_players = font.render('Добавить иигрока', True, color_pl)
+        txt_players = font.render('Добавить игрока', True, color_pl)
         txt_player_name = font.render('Игроки:', True, pygame.Color('white'))
 
         for i in player:
@@ -203,19 +253,12 @@ def menu():
                 players += i
                 players += ' '
         txt_players_list = font.render(players, True, pygame.Color('white'))
-        width = max(200, txt_surface.get_width() + 10)
-        input_box.w = width
-        display.blit(txt_surface, (input_box.x + 5, input_box.y + 5))
         display.blit(txt_points, (50, 30))
-        start_button.draw(0, 650, 'Начать игру', lambda: game_menu())
-        pygame.draw.rect(display, color, input_box, 2)
-        display.blit(txt_surface_p, (input_box_player.x + 5, input_box_player.y + 5))
+        start_button.draw(0, 650)
         display.blit(txt_players, (400, 30))
         display.blit(txt_player_name, (10, 200))
         display.blit(txt_players_list, (100, 200))
-        pygame.draw.rect(display, color_pl, input_box_player, 2)
         pygame.display.flip()
-        clock.tick(30)
 
 
 menu()
