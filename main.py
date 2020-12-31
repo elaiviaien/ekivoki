@@ -73,7 +73,9 @@ def draw_cube(i):
     task_n = ''
     text_p_a = ''
 
-    input_box = InputBox(0, 400, 140, 32, None,None, text_p_a, None, None, None)
+    input_box = InputBox(440, 390, 140, 32, None,None, text_p_a, None, None, None)
+    txt_answer = font.render(f'Введите имя игрока который угадал:', True, pygame.Color('white'))
+    display.blit(txt_answer, (0, 400))
     res = rnd.randrange(1, 7)
     txt_player_name = font.render(f'Игрок: {i}', True, pygame.Color('white'))
     filename = f'cube/{res}.png'
